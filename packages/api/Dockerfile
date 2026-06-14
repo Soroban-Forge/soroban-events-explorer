@@ -9,6 +9,7 @@ COPY packages/db ./packages/db
 COPY packages/api ./packages/api
 
 # Install all dependencies
+RUN apk add --no-cache openssl
 RUN npm install
 
 # Generate the Prisma Client and build the package

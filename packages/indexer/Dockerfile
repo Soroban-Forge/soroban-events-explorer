@@ -9,6 +9,7 @@ COPY packages/db ./packages/db
 COPY packages/indexer ./packages/indexer
 
 # Install all dependencies (npm will automatically link the local workspaces)
+RUN apk add --no-cache openssl
 RUN npm install
 
 # Generate the Prisma Client and build the package
