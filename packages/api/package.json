@@ -8,11 +8,14 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@fastify/websocket": "^11.3.3",
+    "@soroban-forge/db": "*",
     "fastify": "^4.26.0",
-    "@soroban-forge/db": "*"
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.23.1",
+    "typescript": "^5.4.0"
   }
 }

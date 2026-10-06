@@ -66,7 +66,7 @@ async function pollLedger() {
             console.log('[Indexer] Soroban event', payload);
 
             // Persist the event to PostgreSQL via Prisma
-            await prisma.event.upsert({
+            const created = await prisma.event.upsert({
                 where: { id: payload.id },
                 update: {},
                 create: {
@@ -77,6 +77,9 @@ async function pollLedger() {
                     timestamp: payload.ledgerClosedAt ? new Date(payload.ledgerClosedAt) : new Date(),
                 },
             });
+            
+            // Broadcast via PostgreSQL NOTIFY
+            await prisma.$executeRaw`SELECT pg_notify('new_event', ${created.id})`;
         }
 
         lastScannedLedger = latestLedger.sequence;

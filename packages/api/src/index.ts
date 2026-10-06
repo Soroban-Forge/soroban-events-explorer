@@ -1,7 +1,16 @@
 import Fastify from 'fastify';
 import { prisma } from '@soroban-forge/db';
+import fastifyWebsocket from '@fastify/websocket';
+import { Client } from 'pg';
+import { EventEmitter } from 'events';
 
 const fastify = Fastify({ logger: true });
+
+// Register WebSocket support
+fastify.register(fastifyWebsocket);
+
+// Setup EventEmitter for Pub/Sub
+const eventEmitter = new EventEmitter();
 
 // Handle CORS for frontend clients
 fastify.addHook('onRequest', async (request, reply) => {
@@ -69,8 +78,69 @@ fastify.get('/events', async (request, reply) => {
     }
 });
 
+// Real-time Event Stream via WebSocket
+fastify.get('/events/stream', { websocket: true }, (connection, req) => {
+    // Send an initial connected message
+    connection.socket.send(JSON.stringify({ type: 'connected', message: 'Listening for new Soroban events...' }));
+
+    const handleNewEvent = async (eventId: string) => {
+        try {
+            const event = await prisma.event.findUnique({
+                where: { id: eventId }
+            });
+            if (event) {
+                if (connection.socket.readyState === 1) { // OPEN
+                    connection.socket.send(JSON.stringify({
+                        type: 'new_event',
+                        data: event
+                    }));
+                }
+            }
+        } catch (error) {
+            fastify.log.error(`Failed to fetch and broadcast event ${eventId}: ${error}`);
+        }
+    };
+
+    eventEmitter.on('new_event', handleNewEvent);
+
+    connection.socket.on('close', () => {
+        eventEmitter.off('new_event', handleNewEvent);
+    });
+
+    connection.socket.on('error', () => {
+        eventEmitter.off('new_event', handleNewEvent);
+    });
+});
+
+const setupPgListener = async () => {
+    const pgClient = new Client({
+        connectionString: process.env.DATABASE_URL
+    });
+
+    try {
+        await pgClient.connect();
+        await pgClient.query('LISTEN new_event');
+        fastify.log.info('Connected to PostgreSQL and listening for new_event notifications');
+
+        pgClient.on('notification', (msg) => {
+            if (msg.channel === 'new_event' && msg.payload) {
+                eventEmitter.emit('new_event', msg.payload);
+            }
+        });
+
+        pgClient.on('error', (err) => {
+            fastify.log.error(err, 'PostgreSQL client error:');
+        });
+
+    } catch (error) {
+        fastify.log.error(error, 'Failed to setup PostgreSQL listener:');
+    }
+};
+
 const start = async () => {
     try {
+        await setupPgListener();
+        
         // MUST bind to 0.0.0.0 for Docker networking to expose the port
         await fastify.listen({ port: 3001, host: '0.0.0.0' });
         console.log('Soroban Events API listening on http://0.0.0.0:3001');
