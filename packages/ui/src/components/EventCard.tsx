@@ -1,6 +1,5 @@
-import JsonView from '@uiw/react-json-view';
-import { vscodeTheme } from '@uiw/react-json-view/vscode';
 import { decodeScValBase64, decodeTopics } from '../utils/soroban';
+import JsonPayloadViewer from './JsonPayloadViewer';
 
 interface EventCardProps {
   event: {
@@ -41,24 +40,6 @@ export default function EventCard({ event, onCopy }: EventCardProps) {
     } catch {
       return isoString;
     }
-  };
-
-  // Helper to render customized value nodes with click-to-copy behavior
-  const renderClickableValue = (props: any, rawValue: any) => {
-    const stringified = typeof rawValue === 'bigint' ? rawValue.toString() : String(rawValue);
-    return (
-      <span
-        {...props}
-        onClick={(e) => {
-          e.stopPropagation(); // Avoid collapsing or expanding parents
-          onCopy(stringified, 'JSON value');
-        }}
-        className="cursor-pointer hover:underline hover:text-blue-400 font-semibold transition-colors"
-        title="Click to copy value"
-      >
-        {props.children}
-      </span>
-    );
   };
 
   return (
@@ -118,34 +99,8 @@ export default function EventCard({ event, onCopy }: EventCardProps) {
       {/* Decoded Collapsible JSON Value Section */}
       <div className="flex flex-col gap-1.5">
         <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Data Payload</span>
-        <div className="bg-gray-900/60 p-3 rounded border border-gray-800 font-mono text-sm max-h-[300px] overflow-y-auto overflow-x-auto text-left">
-          {decodedData === null || decodedData === undefined ? (
-            <span className="text-gray-500 italic">null</span>
-          ) : typeof decodedData !== 'object' ? (
-            // Format primitive values cleanly
-            <span
-              onClick={() => onCopy(String(decodedData), 'Payload')}
-              className="text-blue-300 font-semibold cursor-pointer hover:underline hover:text-blue-400 transition-all"
-              title="Click to copy payload"
-            >
-              {String(decodedData)}
-            </span>
-          ) : (
-            // Render complex object trees
-            <JsonView
-              value={decodedData}
-              style={{ ...vscodeTheme, background: 'transparent' }}
-              collapsed={1} // Collapses deep nested objects by default at depth 1
-            >
-              <JsonView.String render={(props, { value }) => renderClickableValue(props, value)} />
-              <JsonView.Int render={(props, { value }) => renderClickableValue(props, value)} />
-              <JsonView.Float render={(props, { value }) => renderClickableValue(props, value)} />
-              <JsonView.Bigint render={(props, { value }) => renderClickableValue(props, value)} />
-              <JsonView.True render={(props) => renderClickableValue(props, true)} />
-              <JsonView.False render={(props) => renderClickableValue(props, false)} />
-              <JsonView.Null render={(props) => renderClickableValue(props, null)} />
-            </JsonView>
-          )}
+        <div className="bg-gray-900/60 p-3 rounded border border-gray-800">
+          <JsonPayloadViewer data={decodedData} onCopy={onCopy} />
         </div>
       </div>
     </div>
