@@ -29,6 +29,7 @@ services:
       - STELLAR_NETWORK=testnet
       - RPC_URL=https://soroban-testnet.stellar.org
       - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/soroban_explorer?schema=public
+      - TARGET_CONTRACTS=
     depends_on:
       postgres:
         condition: service_healthy
